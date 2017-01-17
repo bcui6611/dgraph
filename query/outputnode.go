@@ -335,7 +335,11 @@ func processNodeUids(n *fastJsonNode, sg *SubGraph) error {
 	return nil
 }
 
+var jsBuf bytes.Buffer
+
 func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
+	jsBuf.Reset()
+
 	var seedNode *fastJsonNode
 	n := seedNode.New("_root_")
 	if sg.Attr == "_root_" {
@@ -363,7 +367,6 @@ func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
 		n.(*fastJsonNode).attrs["server_latency"] = buf.Bytes()
 	}
 
-	var jsBuf bytes.Buffer
 	n.(*fastJsonNode).encode(&jsBuf)
 
 	return jsBuf.Bytes(), nil
