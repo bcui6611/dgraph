@@ -17,7 +17,7 @@
 package query
 
 import (
-	"bytes"
+	//	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -273,7 +273,7 @@ func valToBytes(v types.Val) ([]byte, error) {
 	}
 }
 
-func (fj *fastJsonNode) encode(jsBuf *bytes.Buffer) {
+func (fj *fastJsonNode) encode(jsBuf []byte) {
 	allKeys := make([]string, 0, len(fj.attrs))
 	for k, _ := range fj.attrs {
 		allKeys = append(allKeys, k)
@@ -283,35 +283,35 @@ func (fj *fastJsonNode) encode(jsBuf *bytes.Buffer) {
 	}
 	sort.Strings(allKeys)
 
-	jsBuf.WriteRune('{')
+	jsBuf = append(jsBuf, '{')
 	first := true
 	for _, k := range allKeys {
 		if !first {
-			jsBuf.WriteRune(',')
+			jsBuf = append(jsBuf, ',')
 		}
 		first = false
-		jsBuf.WriteRune('"')
-		jsBuf.WriteString(k)
-		jsBuf.WriteRune('"')
-		jsBuf.WriteRune(':')
+		jsBuf = append(jsBuf, '"')
+		jsBuf = append(jsBuf, k...)
+		jsBuf = append(jsBuf, '"')
+		jsBuf = append(jsBuf, ':')
 
 		if v, ok := fj.attrs[k]; ok {
-			jsBuf.Write(v)
+			jsBuf = append(jsBuf, v...)
 		} else {
 			v := fj.children[k]
 			first := true
-			jsBuf.WriteRune('[')
+			jsBuf = append(jsBuf, '[')
 			for _, vi := range v {
 				if !first {
-					jsBuf.WriteRune(',')
+					jsBuf = append(jsBuf, ',')
 				}
 				first = false
 				vi.encode(jsBuf)
 			}
-			jsBuf.WriteRune(']')
+			jsBuf = append(jsBuf, ']')
 		}
 	}
-	jsBuf.WriteRune('}')
+	jsBuf = append(jsBuf, '}')
 }
 
 func processNodeUids(n *fastJsonNode, sg *SubGraph) error {
@@ -353,18 +353,18 @@ func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
 	}
 
 	if sg.Params.isDebug {
-		var buf bytes.Buffer
+		buf := make([]byte, 0, 100)
 		sl := seedNode.New("serverLatency").(*fastJsonNode)
 		for k, v := range l.ToMap() {
 			sl.attrs[k] = []byte(fmt.Sprintf("%q", v))
 		}
 
-		sl.encode(&buf)
-		n.(*fastJsonNode).attrs["server_latency"] = buf.Bytes()
+		sl.encode(buf[0:])
+		n.(*fastJsonNode).attrs["server_latency"] = buf
 	}
 
-	var jsBuf bytes.Buffer
-	n.(*fastJsonNode).encode(&jsBuf)
+	jsSlice := make([]byte, 0, 1000)
+	n.(*fastJsonNode).encode(jsSlice[0:])
 
-	return jsBuf.Bytes(), nil
+	return jsSlice, nil
 }
