@@ -358,13 +358,9 @@ func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
 		for k, v := range l.ToMap() {
 			sl.attrs[k] = []byte(fmt.Sprintf("%q", v))
 		}
-
-		sl.encode(buf[0:])
-		n.(*fastJsonNode).attrs["server_latency"] = buf
+		n.(*fastJsonNode).attrs["server_latency"] = sl.encode(buf[0:])
 	}
 
 	jsSlice := make([]byte, 0, 1000)
-	jsSlice = n.(*fastJsonNode).encode(jsSlice[0:])
-
-	return jsSlice, nil
+	return n.(*fastJsonNode).encode(jsSlice[0:]), nil
 }
