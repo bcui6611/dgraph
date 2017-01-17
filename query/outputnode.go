@@ -273,7 +273,7 @@ func valToBytes(v types.Val) ([]byte, error) {
 	}
 }
 
-func (fj *fastJsonNode) encode(jsBuf []byte) {
+func (fj *fastJsonNode) encode(jsBuf []byte, pos int) int {
 	allKeys := make([]string, 0, len(fj.attrs))
 	for k, _ := range fj.attrs {
 		allKeys = append(allKeys, k)
@@ -283,35 +283,66 @@ func (fj *fastJsonNode) encode(jsBuf []byte) {
 	}
 	sort.Strings(allKeys)
 
-	jsBuf = append(jsBuf, '{')
+	pos += copy(jsBuf[pos:], "{")
+	// fmt.Println("encode: pos: ", pos)
+
 	first := true
 	for _, k := range allKeys {
 		if !first {
-			jsBuf = append(jsBuf, ',')
+			pos += copy(jsBuf[pos:], ",")
 		}
 		first = false
-		jsBuf = append(jsBuf, '"')
-		jsBuf = append(jsBuf, k...)
-		jsBuf = append(jsBuf, '"')
-		jsBuf = append(jsBuf, ':')
+		pos += copy(jsBuf[pos:], "\"")
+		pos += copy(jsBuf[pos:], k)
+		pos += copy(jsBuf[pos:], "\"")
+		pos += copy(jsBuf[pos:], ":")
 
 		if v, ok := fj.attrs[k]; ok {
-			jsBuf = append(jsBuf, v...)
+			pos += copy(jsBuf[pos:], v[0:])
 		} else {
 			v := fj.children[k]
 			first := true
-			jsBuf = append(jsBuf, '[')
+			pos += copy(jsBuf[pos:], "[")
 			for _, vi := range v {
 				if !first {
-					jsBuf = append(jsBuf, ',')
+					pos += copy(jsBuf[pos:], ",")
 				}
 				first = false
-				vi.encode(jsBuf)
+				pos = vi.encode(jsBuf, pos)
 			}
-			jsBuf = append(jsBuf, ']')
+			pos += copy(jsBuf[pos:], "]")
 		}
 	}
-	jsBuf = append(jsBuf, '}')
+
+	return pos + copy(jsBuf[pos:], "}")
+}
+
+func (fj *fastJsonNode) sizeOfJs() int {
+	size := 0
+	for k, v := range fj.attrs {
+		size += len(k)
+		size += len(v)
+	}
+	for k, v := range fj.children {
+		size += len(k)
+		for _, vi := range v {
+			size += vi.sizeOfJs()
+		}
+		size += 2 // 2 for '[' and ']' for children
+		if len(v) > 0 {
+			size += len(v) - 1 // for each b/w children
+		}
+	}
+	lChlrn, lAttrs := len(fj.children), len(fj.attrs)
+	if lChlrn > 0 {
+		size += lChlrn - 1 // for ,
+	}
+	if lAttrs > 0 {
+		size += lAttrs - 1 // for ,
+	}
+	size += 3 * (lChlrn + lAttrs) // 2 '"' and 1 : for each key
+	size += 2                     // for '{' '}'
+	return size + 1
 }
 
 func processNodeUids(n *fastJsonNode, sg *SubGraph) error {
@@ -353,18 +384,19 @@ func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
 	}
 
 	if sg.Params.isDebug {
-		buf := make([]byte, 0, 100)
+		buf := make([]byte, 100) // fix this 100
 		sl := seedNode.New("serverLatency").(*fastJsonNode)
 		for k, v := range l.ToMap() {
 			sl.attrs[k] = []byte(fmt.Sprintf("%q", v))
 		}
 
-		sl.encode(buf[0:])
+		sl.encode(buf[0:], 0)
 		n.(*fastJsonNode).attrs["server_latency"] = buf
 	}
 
-	jsSlice := make([]byte, 0, 1000)
-	n.(*fastJsonNode).encode(jsSlice[0:])
-
+	size := n.(*fastJsonNode).sizeOfJs()
+	jsSlice := make([]byte, size)
+	pos := n.(*fastJsonNode).encode(jsSlice, 0)
+	jsSlice = jsSlice[0:pos]
 	return jsSlice, nil
 }
