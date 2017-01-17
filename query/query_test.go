@@ -2640,3 +2640,15 @@ func TestMain(m *testing.M) {
 	x.Init()
 	os.Exit(m.Run())
 }
+
+func BenchmarkMockSubGraphFastJson(b *testing.B) {
+	sg := mockSubGraph()
+	var l Latency
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := sg.ToFastJSON(&l); err != nil {
+			b.FailNow()
+			break
+		}
+	}
+}
