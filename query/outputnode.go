@@ -384,19 +384,18 @@ func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
 	}
 
 	if sg.Params.isDebug {
-		buf := make([]byte, 100) // fix this 100
 		sl := seedNode.New("serverLatency").(*fastJsonNode)
 		for k, v := range l.ToMap() {
 			sl.attrs[k] = []byte(fmt.Sprintf("%q", v))
 		}
 
-		sl.encode(buf[0:], 0)
-		n.(*fastJsonNode).attrs["server_latency"] = buf
+		buf := make([]byte, sl.sizeOfJs())
+		pos := sl.encode(buf[0:], 0)
+		n.(*fastJsonNode).attrs["server_latency"] = buf[0:pos]
 	}
 
 	size := n.(*fastJsonNode).sizeOfJs()
 	jsSlice := make([]byte, size)
 	pos := n.(*fastJsonNode).encode(jsSlice, 0)
-	jsSlice = jsSlice[0:pos]
-	return jsSlice, nil
+	return jsSlice[0:pos], nil
 }
