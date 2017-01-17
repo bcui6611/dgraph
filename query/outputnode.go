@@ -273,7 +273,7 @@ func valToBytes(v types.Val) ([]byte, error) {
 	}
 }
 
-func (fj *fastJsonNode) encode(jsBuf []byte) {
+func (fj *fastJsonNode) encode(jsBuf []byte) []byte {
 	allKeys := make([]string, 0, len(fj.attrs))
 	for k, _ := range fj.attrs {
 		allKeys = append(allKeys, k)
@@ -306,12 +306,12 @@ func (fj *fastJsonNode) encode(jsBuf []byte) {
 					jsBuf = append(jsBuf, ',')
 				}
 				first = false
-				vi.encode(jsBuf)
+				jsBuf = vi.encode(jsBuf)
 			}
 			jsBuf = append(jsBuf, ']')
 		}
 	}
-	jsBuf = append(jsBuf, '}')
+	return append(jsBuf, '}')
 }
 
 func processNodeUids(n *fastJsonNode, sg *SubGraph) error {
@@ -364,7 +364,7 @@ func (sg *SubGraph) ToFastJSON(l *Latency) ([]byte, error) {
 	}
 
 	jsSlice := make([]byte, 0, 1000)
-	n.(*fastJsonNode).encode(jsSlice[0:])
+	jsSlice = n.(*fastJsonNode).encode(jsSlice[0:])
 
 	return jsSlice, nil
 }
