@@ -1815,18 +1815,25 @@ func rootSg(uidMatrix []*task.List, srcUids *task.List, names []string, ages []u
 
 func mockSubGraph() *SubGraph {
 	emptyUids := []uint64{}
-	uidMatrix := []*task.List{&task.List{Uids: emptyUids}, &task.List{Uids: emptyUids}, &task.List{Uids: emptyUids}, &task.List{Uids: emptyUids}}
-	srcUids := &task.List{Uids: []uint64{2, 3, 4, 5}}
+	uidMatrix := []*task.List{} // &task.List{Uids: emptyUids}, &task.List{Uids: emptyUids}, &task.List{Uids: emptyUids}, &task.List{Uids: emptyUids}}
+	srcUids := &task.List{Uids: []uint64{}}
 
-	names := []string{"lincon", "messi", "martin", "aishwarya"}
-	ages := []uint32{56, 29, 45, 36}
+	names := []string{} //"lincon", "messi", "martin", "aishwarya"}
+	ages := []uint32{}  //56, 29, 45, 36}
+	for i := 0; i < 30; i++ {
+		names = append(names, string(i))
+		ages = append(ages, 80)
+		srcUids.Uids = append(srcUids.Uids, uint64(i+2))
+		uidMatrix = append(uidMatrix, &task.List{Uids: emptyUids})
+	}
+
 	namesSg := nameSg(uidMatrix, srcUids, names)
 	agesSg := ageSg(uidMatrix, srcUids, ages)
 
 	sgSrcUids := &task.List{Uids: []uint64{1}}
 	sgUidMatrix := []*task.List{&task.List{Uids: emptyUids}}
 
-	friendUidMatrix := []*task.List{&task.List{Uids: []uint64{2, 3, 4, 5}}}
+	friendUidMatrix := []*task.List{srcUids}
 	friendsSg1 := friendsSg(friendUidMatrix, sgSrcUids, []*SubGraph{namesSg, agesSg})
 
 	sg := rootSg(sgUidMatrix, sgSrcUids, []string{"unknown"}, []uint32{39})
